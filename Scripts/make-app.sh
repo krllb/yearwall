@@ -1,16 +1,22 @@
 #!/bin/bash
 # Builds Yearwall.app.
 #
-# `swift run` is enough for development, but two things need a real bundle:
-# "Launch at Login" (SMAppService.mainApp) and a stable bundle identifier.
+#     Scripts/make-app.sh [debug|release] [--universal]
+#
+# `swift run` is enough for development, but a real bundle is needed for
+# "Launch at Login" (SMAppService.mainApp), the icon and updates.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 CONFIG="${1:-release}"
 APP="build/Yearwall.app"
+FLAGS=(-c "$CONFIG")
+if [[ "${2:-}" == "--universal" ]]; then
+    FLAGS+=(--arch arm64 --arch x86_64)
+fi
 
-swift build -c "$CONFIG"
-BINARY="$(swift build -c "$CONFIG" --show-bin-path)/Yearwall"
+swift build "${FLAGS[@]}"
+BINARY="$(swift build "${FLAGS[@]}" --show-bin-path)/Yearwall"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
