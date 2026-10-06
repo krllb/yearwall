@@ -160,12 +160,7 @@ public final class WallpaperService: NSObject {
 
         let appearance = currentAppearance()
         let config = store.config
-        let progress = timeModel.progress(
-            for: Date(),
-            mode: config.mode,
-            birthDate: config.birthDate,
-            lifespanYears: config.lifespanYears
-        )
+        let progress = currentProgress()
 
         let configFingerprint = (try? config.encoded()).map {
             Seeds.hexString(Seeds.hash(bytes: $0))
@@ -253,10 +248,7 @@ public final class WallpaperService: NSObject {
         ]
 
         for screen in NSScreen.screens {
-            guard
-                let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
-                let url = files[CGDirectDisplayID(number.uint32Value)]
-            else { continue }
+            guard let displayID = screen.displayID, let url = files[displayID] else { continue }
 
             let current = workspace.desktopImageURL(for: screen)
             if current?.standardizedFileURL == url.standardizedFileURL {
@@ -264,9 +256,9 @@ public final class WallpaperService: NSObject {
             }
             do {
                 try workspace.setDesktopImageURL(url, for: screen, options: options)
-                Diagnostics.log("set wallpaper on display \(number.uint32Value) (\(reason)) -> \(url.lastPathComponent)")
+                Diagnostics.log("set wallpaper on display \(displayID) (\(reason)) -> \(url.lastPathComponent)")
             } catch {
-                Diagnostics.log("setDesktopImageURL failed on display \(number.uint32Value): \(error)")
+                Diagnostics.log("setDesktopImageURL failed on display \(displayID): \(error)")
             }
         }
     }
@@ -299,8 +291,8 @@ public final class WallpaperService: NSObject {
     /// `nil` for a screen the surveyor does not know.
     public func drawnFrame(on screen: NSScreen) -> CGRect? {
         guard
-            let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
-            let surface = ScreenSurveyor.surfaces().first(where: { $0.displayID == CGDirectDisplayID(number.uint32Value) })
+            let displayID = screen.displayID,
+            let surface = ScreenSurveyor.surfaces().first(where: { $0.displayID == displayID })
         else { return nil }
 
         let config = store.config
@@ -342,10 +334,7 @@ public final class WallpaperService: NSObject {
     /// whether our image survived a Space switch.
     public func observedDesktopImages() -> [(display: CGDirectDisplayID, url: URL?)] {
         NSScreen.screens.compactMap { screen in
-            guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
-                return nil
-            }
-            return (CGDirectDisplayID(number.uint32Value), NSWorkspace.shared.desktopImageURL(for: screen))
+            screen.displayID.map { ($0, NSWorkspace.shared.desktopImageURL(for: screen)) }
         }
     }
 }
@@ -368,9 +357,8 @@ public enum Diagnostics {
     private static let maxBytes = 512 * 1024
 
     public static func log(_ message: @autoclosure () -> String) {
-        var stamp = ISO8601DateFormatter()
-        stamp.timeZone = .current
-        let line = "[Yearwall \(stamp.string(from: Date()))] \(message())\n"
+        let stamp = Date().ISO8601Format(.iso8601(timeZone: .current))
+        let line = "[Yearwall \(stamp)] \(message())\n"
         FileHandle.standardError.write(Data(line.utf8))
         append(line)
     }

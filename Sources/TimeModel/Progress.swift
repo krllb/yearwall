@@ -115,7 +115,7 @@ public struct Progress: Equatable, Sendable, Codable {
         guard hasGroups else { return (0, unit) }
         var low = 0
         var high = groupSizes.count - 1
-        var running = groupStarts
+        let running = groupStarts
         while low < high {
             let mid = (low + high + 1) / 2
             if running[mid] <= unit { low = mid } else { high = mid - 1 }

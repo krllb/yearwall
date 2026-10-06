@@ -24,6 +24,13 @@ public struct ScreenSurface: Sendable, Equatable {
     }
 }
 
+public extension NSScreen {
+    var displayID: CGDirectDisplayID? {
+        (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)
+            .map { CGDirectDisplayID($0.uint32Value) }
+    }
+}
+
 public enum ScreenSurveyor {
     /// Reads the geometry of every attached screen.
     ///
@@ -35,10 +42,7 @@ public enum ScreenSurveyor {
     @MainActor
     public static func surfaces() -> [ScreenSurface] {
         NSScreen.screens.compactMap { screen in
-            guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
-                return nil
-            }
-            let displayID = CGDirectDisplayID(number.uint32Value)
+            guard let displayID = screen.displayID else { return nil }
             let points = screen.frame.size
 
             var pixelWidth = Int(points.width * screen.backingScaleFactor)
