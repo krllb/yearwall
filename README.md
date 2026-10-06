@@ -18,13 +18,18 @@ Requires macOS 14 or later, on Apple silicon or Intel.
 
 1. Download `Yearwall-<version>.zip` from the [latest release](https://github.com/krllb/yearwall/releases/latest).
 2. Unzip it and move `Yearwall.app` to `/Applications`.
-3. The app is not notarized, so open it the first time with right-click → Open. Or run:
+3. Open it. The app is not notarized, so macOS refuses the first launch and says it cannot
+   verify the developer.
+4. Open **System Settings → Privacy & Security**, scroll down to the message about
+   Yearwall and click **Open Anyway**, then confirm with your password.
 
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/Yearwall.app
-   ```
+This is needed once. Updates are downloaded by the app itself and open without the warning.
 
-After that, updates install by themselves.
+If you prefer the terminal, this replaces steps 3–4:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Yearwall.app && open /Applications/Yearwall.app
+```
 
 ## Use
 
