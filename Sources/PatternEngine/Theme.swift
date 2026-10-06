@@ -17,16 +17,16 @@ public enum Appearance: String, Sendable, Codable, CaseIterable {
 /// desktop icon labels unreadable, and preventing that is the app's job, not
 /// the user's.
 public struct Theme: Codable, Equatable, Sendable {
-    /// The background anchor.
+    /// The background. In the dark appearance only, when `lightBase` is set.
     public var base: RGBA
+    /// The background in the light appearance. `nil` keeps the theme the same
+    /// whatever the system appearance is.
+    public var lightBase: RGBA?
     /// The only colour allowed to be high contrast.
     public var accent: RGBA
     /// How far marks travel from the background, in perceptual lightness.
     /// Clamped to `Theme.contrastRange` and again by `CompositionBudget`.
     public var contrast: Double
-    /// Which variant `base` and `accent` were authored for. The other variant
-    /// is derived from the same two colours.
-    public var isDarkVariant: Bool
     /// Colour of a unit already behind us, when deriving it from `base` will
     /// not do.
     ///
@@ -36,70 +36,61 @@ public struct Theme: Codable, Equatable, Sendable {
     public var elapsedOverride: RGBA?
     /// Colour of a unit still ahead. Same reasoning as `elapsedOverride`.
     public var remainingOverride: RGBA?
-    /// Whether the light and dark variants are derived from these colours.
-    ///
-    /// A theme quoting a specific look rather than describing a palette has no
-    /// second variant to derive: re-deriving it would just break the quote.
-    public var followsAppearance: Bool
 
     /// Below 0.2 a mark on black is #333 on #000 and reads as almost nothing.
     public static let contrastRange: ClosedRange<Double> = 0.04 ... 0.55
 
     public init(
         base: RGBA,
+        lightBase: RGBA? = nil,
         accent: RGBA,
         contrast: Double,
-        isDarkVariant: Bool,
         elapsedOverride: RGBA? = nil,
-        remainingOverride: RGBA? = nil,
-        followsAppearance: Bool = true
+        remainingOverride: RGBA? = nil
     ) {
         self.base = base
+        self.lightBase = lightBase
         self.accent = accent
         self.contrast = contrast.clamped(to: Theme.contrastRange)
-        self.isDarkVariant = isDarkVariant
         self.elapsedOverride = elapsedOverride
         self.remainingOverride = remainingOverride
-        self.followsAppearance = followsAppearance
     }
+
+    /// Whether the theme switches with the system appearance.
+    public var followsAppearance: Bool { lightBase != nil }
 
     /// True when the mark colours are stated outright rather than derived.
     public var isLiteral: Bool { elapsedOverride != nil || remainingOverride != nil }
 
     /// Missing or malformed fields decode to the default theme's values.
     public init(from decoder: any Decoder) throws {
-        let fallback = ThemeLibrary.black
+        let fallback = ThemeLibrary.system
         guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
             self = fallback
             return
         }
         self.init(
             base: container.lenient(.base, fallback.base),
+            lightBase: container.lenient(.lightBase, nil),
             accent: container.lenient(.accent, fallback.accent),
             contrast: container.lenient(.contrast, fallback.contrast),
-            isDarkVariant: container.lenient(.isDarkVariant, fallback.isDarkVariant),
             elapsedOverride: container.lenient(.elapsedOverride, fallback.elapsedOverride),
-            remainingOverride: container.lenient(.remainingOverride, fallback.remainingOverride),
-            followsAppearance: container.lenient(.followsAppearance, fallback.followsAppearance)
+            remainingOverride: container.lenient(.remainingOverride, fallback.remainingOverride)
         )
     }
 
     // MARK: - Derivation
 
-    /// The concrete colours for one appearance.
-    ///
-    /// Lightness is moved by mixing toward white or black, which preserves hue
-    /// but not perceptual step size.
+    /// The concrete colours for one appearance. Marks are the background mixed
+    /// toward white on a dark background and toward black on a light one.
     public func resolved(
         for appearance: Appearance,
         maxContrast: Double,
         remainingIntensity: Double
     ) -> ResolvedTheme {
         let contrast = min(self.contrast, maxContrast)
-        let background = backgroundColor(for: appearance)
-        let ink: RGBA = followsAppearance
-            ? (appearance.isDark ? RGBA(1, 1, 1) : RGBA(0, 0, 0))
-            : (base.luminance < 0.5 ? RGBA(1, 1, 1) : RGBA(0, 0, 0))
+        let background = appearance.isDark ? base : (lightBase ?? base)
+        let ink = background.luminance < 0.5 ? RGBA(1, 1, 1) : RGBA(0, 0, 0)
         let weight = min(max(remainingIntensity, 0), 1)
         return ResolvedTheme(
             background: background,
@@ -109,15 +100,6 @@ public struct Theme: Codable, Equatable, Sendable {
             contrast: contrast,
             ink: ink
         )
-    }
-
-    private func backgroundColor(for appearance: Appearance) -> RGBA {
-        guard followsAppearance else { return base }
-        guard appearance.isDark != isDarkVariant else { return base }
-        // Same hue, opposite end of the lightness range.
-        return appearance.isDark
-            ? base.mixed(with: RGBA(0, 0, 0), amount: 0.92)
-            : base.mixed(with: RGBA(1, 1, 1), amount: 0.92)
     }
 }
 
@@ -131,7 +113,7 @@ public struct ResolvedTheme: Sendable, Equatable {
     public let accent: RGBA
     /// The contrast actually used, after clamping.
     public let contrast: Double
-    /// The end of the ramp: white in dark mode, black in light mode.
+    /// The end of the ramp: white on a dark background, black on a light one.
     public let ink: RGBA
 
     /// Any intensity along the ramp, capped by construction: a pattern cannot

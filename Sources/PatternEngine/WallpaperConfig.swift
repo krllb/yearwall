@@ -54,7 +54,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
         connectsElapsedMarks: Bool = true,
         blacksOutMenuBar: Bool = false,
         themePresetID: String? = ThemeLibrary.defaultID,
-        theme: Theme = ThemeLibrary.black,
+        theme: Theme = ThemeLibrary.system,
         budget: CompositionBudget = .default,
         installSeed: UInt64 = WallpaperConfig.placeholderSeed
     ) {

@@ -7,7 +7,7 @@ redrawn at midnight, so the line grows by one dot a day.
 ![Yearwall: the year as a grid of days, with the settings bar under it](docs/screenshot.png)
 
 - Lives in the menu bar, no Dock icon.
-- Renders at each display's real resolution and follows light and dark mode.
+- Renders at each display's real resolution. The System theme switches with light and dark mode.
 - Redraws at midnight, after sleep, when displays change and when you switch Spaces.
 - Updates itself from GitHub releases once a day.
 - No analytics, no accounts. The only network request is the update check.
@@ -45,7 +45,7 @@ In the settings bar:
 
 | Control | What it does |
 | --- | --- |
-| Theme | Black, Paper, Deep, Terracotta or Classic 95 |
+| Theme | System (black in dark mode, white in light), Black, White, Paper, Deep, Terracotta or Classic 95 |
 | Join elapsed marks | Draws the days already gone as one line per month instead of separate dots |
 | Black menu bar | Paints the strip under the menu bar black, so a bright theme does not tint it |
 | Mark size | Dot diameter, in points |

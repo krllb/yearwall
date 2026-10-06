@@ -65,11 +65,11 @@ final class CompositionTests: XCTestCase {
 
     func testThemeContrastIsClampedToItsOwnRange() {
         XCTAssertEqual(
-            Theme(base: RGBA(0, 0, 0), accent: RGBA(1, 0, 0), contrast: 5, isDarkVariant: true).contrast,
+            Theme(base: RGBA(0, 0, 0), accent: RGBA(1, 0, 0), contrast: 5).contrast,
             Theme.contrastRange.upperBound
         )
         XCTAssertEqual(
-            Theme(base: RGBA(0, 0, 0), accent: RGBA(1, 0, 0), contrast: -1, isDarkVariant: true).contrast,
+            Theme(base: RGBA(0, 0, 0), accent: RGBA(1, 0, 0), contrast: -1).contrast,
             Theme.contrastRange.lowerBound
         )
     }
@@ -142,25 +142,28 @@ final class CompositionTests: XCTestCase {
         )
     }
 
-    func testBothAppearancesAreDerivedFromOneTheme() {
-        for preset in ThemeLibrary.all where preset.theme.followsAppearance {
-            let light = preset.theme.resolved(for: .light, maxContrast: 0.55, remainingIntensity: 0.3)
-            let dark = preset.theme.resolved(for: .dark, maxContrast: 0.55, remainingIntensity: 0.3)
-            XCTAssertGreaterThan(
-                light.background.luminance, dark.background.luminance,
-                "\(preset.id): the light variant must be lighter"
-            )
+    func testSystemIsBlackInDarkModeAndWhiteInLight() {
+        let system = ThemeLibrary.system
+        let black = ThemeLibrary.black
+        let white = ThemeLibrary.white
+        func resolve(_ theme: Theme, _ appearance: Appearance) -> ResolvedTheme {
+            theme.resolved(for: appearance, maxContrast: 0.55, remainingIntensity: 0.3)
         }
+        XCTAssertEqual(resolve(system, .dark), resolve(black, .dark))
+        XCTAssertEqual(resolve(system, .light), resolve(white, .light))
+        XCTAssertEqual(resolve(white, .light).background, RGBA(hex: 0xFFFFFF))
     }
 
-    func testAThemeThatQuotesALookIgnoresTheAppearance() {
-        let theme = ThemeLibrary.classic95
-        XCTAssertFalse(theme.followsAppearance)
-        XCTAssertEqual(
-            theme.resolved(for: .light, maxContrast: 0.55, remainingIntensity: 0.3),
-            theme.resolved(for: .dark, maxContrast: 0.55, remainingIntensity: 0.3),
-            "re-deriving a quoted look would just break the quote"
-        )
+    func testOnlySystemFollowsTheAppearance() {
+        for preset in ThemeLibrary.all {
+            XCTAssertEqual(preset.theme.followsAppearance, preset.id == "system", preset.id)
+            guard !preset.theme.followsAppearance else { continue }
+            XCTAssertEqual(
+                preset.theme.resolved(for: .light, maxContrast: 0.55, remainingIntensity: 0.3),
+                preset.theme.resolved(for: .dark, maxContrast: 0.55, remainingIntensity: 0.3),
+                preset.id
+            )
+        }
     }
 
     func testStatedMarkColoursAreUsedVerbatim() {

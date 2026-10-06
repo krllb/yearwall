@@ -133,7 +133,7 @@ final class WallpaperConfigTests: XCTestCase {
         XCTAssertNil(config.birthDate)
         XCTAssertEqual(config.lifespanYears, 80)
         XCTAssertTrue(PatternLibrary.all.contains { $0.id == config.patternID })
-        XCTAssertEqual(config.theme, ThemeLibrary.black)
+        XCTAssertEqual(config.theme, ThemeLibrary.system)
         XCTAssertEqual(config.themePresetID, ThemeLibrary.defaultID)
     }
 

@@ -10,7 +10,7 @@ final class DeterminismTests: XCTestCase {
     private func makeConfig(
         patternID: String = PatternLibrary.defaultID,
         installSeed: UInt64 = 0xC0FF_EE00_1234,
-        theme: Theme = ThemeLibrary.black
+        theme: Theme = ThemeLibrary.system
     ) -> WallpaperConfig {
         var config = WallpaperConfig.default
         config.patternID = patternID
@@ -107,7 +107,12 @@ final class DeterminismTests: XCTestCase {
             config.patternID = descriptor.id
             variants.append(("pattern \(descriptor.id)", config))
         }
-        for preset in ThemeLibrary.all where preset.theme != base.theme {
+        func colours(_ theme: Theme) -> ResolvedTheme {
+            theme.resolved(for: canvas.appearance, maxContrast: 0.55, remainingIntensity: 0.3)
+        }
+        // System in dark mode is Black: a preset that resolves to the same
+        // colours is not expected to change the picture.
+        for preset in ThemeLibrary.all where colours(preset.theme) != colours(base.theme) {
             var config = base
             config.adopt(preset: preset)
             variants.append(("theme \(preset.id)", config))
