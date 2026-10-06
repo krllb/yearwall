@@ -342,8 +342,7 @@ public final class WallpaperService: NSObject {
 /// Timestamped logging to stderr and to `~/Library/Logs/Yearwall.log`.
 ///
 /// The file matters because the app is normally launched by Launch Services,
-/// where stderr goes nowhere the user can read. Nothing leaves the machine:
-/// there is no analytics and no network code anywhere in this package.
+/// where stderr goes nowhere the user can read. Nothing leaves the machine.
 public enum Diagnostics {
     public static var logFileURL: URL {
         let logs = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?

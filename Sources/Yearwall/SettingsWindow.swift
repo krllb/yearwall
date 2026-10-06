@@ -35,6 +35,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         self.service = service
     }
 
+    var isVisible: Bool { panel?.isVisible == true }
+
     func show() {
         let panel = panel ?? makePanel()
         if !panel.isVisible {

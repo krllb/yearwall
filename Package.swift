@@ -13,9 +13,10 @@ let package = Package(
         .target(name: "PatternEngine", dependencies: ["TimeModel"]),
         .target(name: "Renderer", dependencies: ["TimeModel", "PatternEngine"]),
         .target(name: "WallpaperService", dependencies: ["TimeModel", "PatternEngine", "Renderer"]),
+        .target(name: "Updater"),
         .executableTarget(
             name: "Yearwall",
-            dependencies: ["TimeModel", "PatternEngine", "Renderer", "WallpaperService"],
+            dependencies: ["TimeModel", "PatternEngine", "Renderer", "WallpaperService", "Updater"],
             exclude: ["Info.plist"],
             linkerSettings: [
                 // Embed Info.plist into the bare executable so `swift run` already behaves
@@ -32,6 +33,7 @@ let package = Package(
         .testTarget(name: "PatternEngineTests", dependencies: ["PatternEngine", "TimeModel"]),
         .testTarget(name: "RendererTests", dependencies: ["Renderer", "PatternEngine", "TimeModel"]),
         .testTarget(name: "WallpaperServiceTests", dependencies: ["WallpaperService", "PatternEngine", "TimeModel"]),
+        .testTarget(name: "UpdaterTests", dependencies: ["Updater"]),
     ],
     swiftLanguageModes: [.v6]
 )

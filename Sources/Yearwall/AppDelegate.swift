@@ -2,6 +2,7 @@ import AppKit
 import Observation
 import PatternEngine
 import TimeModel
+import Updater
 import WallpaperService
 
 @MainActor
@@ -9,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = ConfigStore()
     private lazy var service = WallpaperService(store: store)
     private lazy var settingsWindow = SettingsWindow(store: store, service: service)
+    private let updater = Updater.Configuration().map { Updater(configuration: $0, log: { Diagnostics.log($0) }) }
 
     private var statusItem: NSStatusItem?
     private let progressItem = NSMenuItem(title: "…", action: nil, keyEquivalent: "")
@@ -22,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         observeSettings()
         service.start()
+        updater?.canRelaunch = { [weak self] in self?.settingsWindow.isVisible == false }
+        updater?.start()
 
         // Development aid: `Yearwall --settings` opens the window at launch.
         if CommandLine.arguments.contains("--settings") {
@@ -31,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         service.stop()
+        updater?.stop()
     }
 
     // MARK: - Menu
@@ -52,6 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         loginItem.action = #selector(toggleLaunchAtLogin)
         loginItem.target = self
         menu.addItem(loginItem)
+
+        let updateItem = menu.addItem(
+            withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""
+        )
+        updateItem.target = self
+        updateItem.isEnabled = updater != nil
 
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Yearwall", action: #selector(quit), keyEquivalent: "q").target = self
@@ -86,6 +97,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.runModal()
         }
         refreshLoginItemState()
+    }
+
+    @objc private func checkForUpdates() {
+        guard let updater else { return }
+        Task {
+            let alert = NSAlert()
+            do {
+                switch try await updater.check() {
+                case let .upToDate(version):
+                    alert.messageText = "Yearwall \(version) is the latest version"
+                case let .postponed(version):
+                    alert.messageText = "Yearwall \(version) will install once settings are closed"
+                case .installed:
+                    return
+                }
+            } catch {
+                alert.messageText = "Could not check for updates"
+                alert.informativeText = error.localizedDescription
+            }
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
     }
 
     @objc private func quit() {
