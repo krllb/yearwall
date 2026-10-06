@@ -16,6 +16,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINARY" "$APP/Contents/MacOS/Yearwall"
 cp Sources/Yearwall/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # Ad-hoc signature: SMAppService refuses to register an unsigned bundle.
 codesign --force --sign - --identifier com.krllb.Yearwall "$APP"
