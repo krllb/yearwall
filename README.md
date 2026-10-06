@@ -3,14 +3,16 @@
 A macOS menu bar app that generates a wallpaper every day and sets it as the desktop
 background. The wallpaper draws one mark per day of the current year, as a grid.
 
-No network access. No analytics. No accounts. Nothing leaves the machine.
+No analytics. No accounts. The only network request is a daily update check against this
+repository's GitHub releases.
 
 ## Build and run
 
 ```sh
 swift build && swift run          # development: menu bar app, no Dock icon
-./Scripts/make-app.sh && open build/Yearwall.app   # bundled app (needed for Launch at Login)
-swift test                        # 98 tests
+./Scripts/make-app.sh && open build/Yearwall.app   # bundled app (Launch at Login, updates)
+swift test                        # 134 tests
+swift Scripts/make-icon.swift     # redraw Resources/AppIcon.icns
 ```
 
 Development helpers, neither of which touches the desktop:
@@ -21,6 +23,28 @@ swift run Yearwall --preview --pattern phyllotaxis --appearance light --out /tmp
 ```
 
 Logs go to stderr and to `~/Library/Logs/Yearwall.log`.
+
+## Releases and updates
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`: tests, a universal (arm64 + x86_64)
+build stamped with the tag's version, and a GitHub release carrying `Yearwall-<version>.zip`.
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The bundled app checks `releases/latest` of the repository named by
+`YearwallUpdateRepository` in `Info.plist` once a day (looking every hour whether a day has
+passed, so sleep does not skip a check), plus "Check for Updates…" in the menu. A newer
+release is downloaded, checked against the SHA-256 digest GitHub publishes for the asset,
+unpacked, checked for the same bundle identifier and the expected version, `codesign
+--verify`'d, swapped in place of the running bundle, and relaunched. The install waits while
+the settings bar is open.
+
+Releases are ad-hoc signed, not notarized. The first download from the browser needs
+right-click → Open (or `xattr -dr com.apple.quarantine Yearwall.app`); updates fetched by the
+app itself carry no quarantine flag. The app must sit in a folder the user can write to,
+such as `/Applications` on an admin account.
 
 ## Architecture
 
@@ -205,11 +229,11 @@ current configuration plus an explicit opt-in.
 | 5 | Next day + Refresh now → one more filled element | Covered by `testEachDayAddsInk`, which measures ink coverage on the rendered bitmap. Not exercised by moving the system clock. |
 | 6 | Same date → byte-identical PNG | Verified on encoded bytes, both patterns, repeated renders. |
 | 7 | Desktop icon labels stay legible on the right | The quiet zone was removed on the owner's instruction; legibility now rests on the 20% contrast cap. |
-| 8 | Unit tests for `TimeModel` and RNG determinism | 98 tests: leap years, year rollover, both DST boundaries, a full DST year, time-zone-dependent day keys, future birth date, exceeded lifespan, missing birth date, splitmix64 golden vectors, FNV-1a stability. |
+| 8 | Unit tests for `TimeModel` and RNG determinism | Leap years, year rollover, both DST boundaries, a full DST year, time-zone-dependent day keys, future birth date, exceeded lifespan, missing birth date, splitmix64 golden vectors, FNV-1a stability. |
 | 9 | ≤ 7 PNGs after 10 day changes | Verified by test, and by the same-day pruning rule. |
 | 10 | README documents observed Spaces behaviour | This section. |
 
 ## Non-goals in v0
 
-Goal countdown and journey modes, sandboxing and App Store packaging, Sparkle, iCloud sync,
+Goal countdown and journey modes, sandboxing and App Store packaging, iCloud sync,
 export, animated wallpapers, and any platform other than macOS.
