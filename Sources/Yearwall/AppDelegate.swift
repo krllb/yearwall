@@ -37,10 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(
-            systemSymbolName: "circle.grid.cross", accessibilityDescription: "Yearwall"
-        )
-        item.button?.image?.isTemplate = true
+        item.button?.image = StatusIcon.make()
 
         let menu = NSMenu()
         menu.delegate = self
