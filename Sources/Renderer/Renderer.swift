@@ -57,8 +57,7 @@ public struct WallpaperRenderer: Sendable {
         }
 
         // A bitmap context has its origin at the bottom left. Flip it once here
-        // so `draw` can work in screen terms; a context that is already
-        // top-left — SwiftUI's, for the live preview — skips this step.
+        // so `draw` can work in screen terms.
         context.translateBy(x: 0, y: CGFloat(canvas.pixelHeight))
         context.scaleBy(x: 1, y: -1)
 
@@ -70,11 +69,8 @@ public struct WallpaperRenderer: Sendable {
         return image
     }
 
-    /// The one drawing path.
-    ///
-    /// The live preview in settings calls exactly this, so a preview can never
-    /// drift from the wallpaper it is previewing. The context must already be
-    /// in screen orientation: origin top-left, y growing downward.
+    /// The one drawing path. The context must already be in screen
+    /// orientation: origin top-left, y growing downward.
     public func draw(
         config: WallpaperConfig,
         progress: TimeModel.Progress,

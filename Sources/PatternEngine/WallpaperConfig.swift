@@ -34,11 +34,8 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
     /// The preset the theme follows, or `nil` once its colours have been
     /// edited by hand.
     ///
-    /// Storing only the values — the model the brief describes — means a build
-    /// that retunes a preset cannot reach an installation that already saved
-    /// one: the copy in the config keeps winning, with nothing to show for it.
-    /// Following the preset by id until the user edits it keeps both properties:
-    /// presets stay tunable, and an edited theme stays the user's.
+    /// Following the preset by id, rather than storing its colours, lets a
+    /// later build retune a preset for installations that already saved it.
     public private(set) var themePresetID: String?
     /// Read-only from outside: assigning colours while a preset is still being
     /// followed would appear to work and then revert on the next load. Go
@@ -80,16 +77,8 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
 
     public static let `default` = WallpaperConfig()
 
-    /// What gets written to disk.
-    ///
-    /// `budget` was left out of this for a while: persisting it froze whatever
-    /// the defaults happened to be on the day an installation first saved, so a
-    /// later build could change a default and the stored blob would keep
-    /// winning — the app on screen and the app in the source disagreed with
-    /// nothing to show for it. It is persisted again now that the settings
-    /// window edits it, which makes the values the user's rather than the
-    /// build's, and `ConfigStore.resetBudget()` is the way back to the
-    /// build's.
+    /// What gets written to disk. `budget` is the user's once edited in
+    /// settings; `ConfigStore.resetBudget()` is the way back to the defaults.
     private enum CodingKeys: String, CodingKey {
         case birthDate
         case lifespanYears

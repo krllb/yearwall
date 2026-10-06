@@ -30,7 +30,7 @@ public extension Pattern {
 public enum MarkKind: Sendable {
     /// A unit already behind us: drawn at full weight.
     case elapsed
-    /// The unit we are living through: the one high-contrast mark.
+    /// The unit we are living through.
     case today
     /// A unit still ahead: drawn at `CompositionBudget.remainingIntensity`.
     case remaining

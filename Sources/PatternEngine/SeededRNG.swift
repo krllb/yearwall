@@ -48,7 +48,7 @@ public struct SeededRNG: RandomNumberGenerator, Sendable {
     }
 }
 
-/// Seed derivation. Two levels, as specified:
+/// Seed derivation, on two levels:
 /// * install seed — one per installation, fixes the "character" of the pattern
 /// * day seed     — install seed mixed with `yyyy-MM-dd`, varies day to day
 public enum Seeds {

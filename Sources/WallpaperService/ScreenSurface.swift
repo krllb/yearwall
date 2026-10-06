@@ -4,7 +4,8 @@ import PatternEngine
 /// One display, described in the terms the renderer needs.
 public struct ScreenSurface: Sendable, Equatable {
     public let displayID: CGDirectDisplayID
-    /// True panel pixels, not points.
+    /// Framebuffer pixels, not points. On a scaled HiDPI mode this is not
+    /// the panel's native resolution.
     public let pixelWidth: Int
     public let pixelHeight: Int
     /// Pixels per point for this display's current mode.
@@ -35,10 +36,9 @@ public enum ScreenSurveyor {
     /// Reads the geometry of every attached screen.
     ///
     /// `NSScreen.frame` is in points; `CGDisplayMode.pixelWidth/pixelHeight`
-    /// give the panel's real pixels, which is what a wallpaper should match.
-    /// On a scaled HiDPI mode those two disagree (e.g. 2560x1440pt shown on a
-    /// 3840x2160 panel), so the scale is derived rather than taken from
-    /// `backingScaleFactor`.
+    /// give the framebuffer the window server composites the desktop at. On a
+    /// non-integral scaled mode the ratio of the two differs from
+    /// `backingScaleFactor`, so the scale is derived instead.
     @MainActor
     public static func surfaces() -> [ScreenSurface] {
         NSScreen.screens.compactMap { screen in

@@ -2,11 +2,9 @@ import Foundation
 
 /// The half of the seeding that does *not* change from day to day.
 ///
-/// Derived once from the install seed and carried on the `Composition`, so the
-/// `draw` signature stays as specified while patterns still get their "global
-/// character". Placement is deliberately *not* part of it: the composition is
-/// centred on the canvas, and a seed that nudged it off-centre only ever looked
-/// like a mistake.
+/// Derived once from the install seed and carried on the `Composition`.
+/// Placement is deliberately *not* part of it: a composition nudged off-centre
+/// only ever looked like a mistake.
 public struct PatternCharacter: Sendable, Equatable {
     /// Multiplies mark size. 1.0 == the pattern's own default.
     public var density: Double

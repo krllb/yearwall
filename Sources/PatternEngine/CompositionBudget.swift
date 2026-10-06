@@ -2,8 +2,8 @@ import CoreGraphics
 import Foundation
 
 /// Every number that makes the output behave like a *wallpaper* rather than a
-/// poster lives here, so it can be tuned in one place (and, later, exposed in
-/// settings) instead of being scattered through the patterns.
+/// poster lives here, so it can be tuned in one place instead of being
+/// scattered through the patterns.
 public struct CompositionBudget: Sendable, Equatable, Codable {
     // MARK: Contrast
 
@@ -69,12 +69,8 @@ public struct CompositionBudget: Sendable, Equatable, Codable {
     /// of a thinner line, which reads as a caterpillar rather than as a run.
     public var connectorWidth: Double
     /// How strong a mark for a unit still ahead is, relative to one already
-    /// behind us. Every mark is filled; only the weight differs.
-    ///
-    /// Outlining the future ones was tried first. At the sizes these marks
-    /// actually get, a one-pixel ring is not reliably distinguishable from a
-    /// filled dot, and the drawing read as two unrelated textures rather than
-    /// one run of time.
+    /// behind us. Every mark is filled: at these sizes a one-pixel ring is
+    /// not reliably distinguishable from a dot.
     public var remainingIntensity: Double
 
     public init(
@@ -148,5 +144,4 @@ public struct CompositionBudget: Sendable, Equatable, Codable {
             connectorWidth: container.lenient(.connectorWidth, fallback.connectorWidth)
         )
     }
-
 }

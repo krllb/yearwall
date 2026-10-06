@@ -42,10 +42,7 @@ public struct Theme: Codable, Equatable, Sendable {
     /// second variant to derive: re-deriving it would just break the quote.
     public var followsAppearance: Bool
 
-    /// The v0 brief capped pattern contrast at roughly 20%, on the theory that
-    /// a wallpaper should stay behind its icons. In practice 20% of the way
-    /// from black to white is #333 on #000, which reads as almost nothing.
-    /// Raised on the owner's call; the ceiling is still enforced, just higher.
+    /// Below 0.2 a mark on black is #333 on #000 and reads as almost nothing.
     public static let contrastRange: ClosedRange<Double> = 0.04 ... 0.55
 
     public init(
@@ -91,9 +88,8 @@ public struct Theme: Codable, Equatable, Sendable {
 
     /// The concrete colours for one appearance.
     ///
-    /// PHASE 1 IMPLEMENTATION: lightness is moved by mixing toward white or
-    /// black, which preserves hue but not perceptual step size. Phase 3
-    /// replaces this with OKLCH.
+    /// Lightness is moved by mixing toward white or black, which preserves hue
+    /// but not perceptual step size.
     public func resolved(
         for appearance: Appearance,
         maxContrast: Double,

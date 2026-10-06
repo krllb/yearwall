@@ -21,9 +21,7 @@ public enum TimeMode: String, Sendable, Codable, CaseIterable, Identifiable {
 /// Pure description of "where we are" in a span of time.
 ///
 /// `elapsed` counts units *fully behind us*, `todayIndex` is the index of the
-/// unit we are living through right now, so `todayIndex == elapsed` always
-/// holds for the modes shipped in v0. Both are kept in the type because a
-/// future mode (a goal countdown) may want them to diverge.
+/// unit we are living through right now. They are equal in both modes.
 public struct Progress: Equatable, Sendable, Codable {
     public let mode: TimeMode
     /// Units completed before today. `0 ..< total`.

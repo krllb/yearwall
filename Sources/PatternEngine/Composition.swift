@@ -40,7 +40,6 @@ public struct Composition: Sendable {
         return CGRect(x: side, y: top, width: width, height: height)
     }
 
-
     /// Where the composition is centred: the middle of the canvas, so it looks
     /// centred on the screen rather than centred on whatever is left after the
     /// Dock inset is taken off the bottom.
@@ -88,7 +87,6 @@ public struct Composition: Sendable {
         return min(vertical, horizontal) * CGFloat(min(max(budget.contentScale, 0.1), 1))
     }
 
-
     /// The strip to paint black under the menu bar, or `nil` when the option
     /// is off or this screen has no menu bar.
     public var menuBarBandRect: CGRect? {
@@ -133,5 +131,4 @@ public struct Composition: Sendable {
     public func mark(_ intensity: Double) -> RGBA {
         colors.mark(intensity)
     }
-
 }

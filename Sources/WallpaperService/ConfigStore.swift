@@ -3,12 +3,8 @@ import Observation
 import PatternEngine
 import TimeModel
 
-/// The single persisted object.
-///
-/// v0 scattered settings across seven `UserDefaults` keys, which made partial
-/// upgrades and partial corruption both possible. There is now one JSON blob:
-/// it either loads, or falls back field by field, and the install seed can
-/// never be lost while the rest survives.
+/// The single persisted object: one JSON blob that either loads or falls back
+/// field by field, so the install seed is never lost while the rest survives.
 @MainActor
 @Observable
 public final class ConfigStore {

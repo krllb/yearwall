@@ -104,10 +104,7 @@ public struct WallpaperCache: Sendable {
         return removed
     }
 
-    // TODO: macOS also caches every wallpaper it has ever been given, under
-    // ~/Library/Application Support/com.apple.wallpaper/ (and, on older
-    // systems, the desktoppicture.db store). It grows without bound. Offering
-    // to clean it needs (a) confirmation that the files are not referenced by
-    // the current configuration and (b) an explicit user opt-in, so it is left
-    // out of v0 deliberately rather than forgotten.
+    // TODO: macOS keeps every wallpaper it has been given under
+    // ~/Library/Application Support/com.apple.wallpaper/ and never prunes it.
+    // Cleaning it needs proof a file is unreferenced plus an explicit opt-in.
 }

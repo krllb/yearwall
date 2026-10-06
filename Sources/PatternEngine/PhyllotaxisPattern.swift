@@ -32,8 +32,7 @@ public struct PhyllotaxisPattern: Pattern {
         let spread = rng.nextDouble(in: 0.94 ... 1.0)
         let rotation = composition.character.orientation + rng.nextDouble(in: 0 ..< (2 * Double.pi))
 
-        // Centred on the canvas, sized to stay inside the safe rect. The head
-        // does reach into the quiet zone, where it is attenuated.
+        // Centred on the canvas, sized to stay inside the safe rect.
         let maxRadius = composition.contentRadius * CGFloat(spread)
 
         // Grouping in a spiral only works at the coarse level. A life has 80
