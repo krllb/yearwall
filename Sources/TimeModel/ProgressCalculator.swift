@@ -23,10 +23,6 @@ public struct ProgressCalculator: Sendable {
         self.calendar = calendar
     }
 
-    public init(calendar: Calendar) {
-        self.calendar = calendar
-    }
-
     /// `yyyy-MM-dd` for `date` in this model's calendar. Built from components
     /// rather than a `DateFormatter` so it can never pick up a locale-specific
     /// numbering system.

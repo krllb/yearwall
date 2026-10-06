@@ -22,6 +22,4 @@ public struct CanvasSpec: Sendable, Equatable {
     public var bounds: CGRect {
         CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight))
     }
-
-    public var minSide: CGFloat { min(bounds.width, bounds.height) }
 }

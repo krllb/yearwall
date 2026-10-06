@@ -356,8 +356,6 @@ public final class WallpaperService: NSObject {
 /// where stderr goes nowhere the user can read. Nothing leaves the machine:
 /// there is no analytics and no network code anywhere in this package.
 public enum Diagnostics {
-    nonisolated(unsafe) public static var isEnabled = true
-
     public static var logFileURL: URL {
         let logs = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Logs", isDirectory: true)
@@ -370,7 +368,6 @@ public enum Diagnostics {
     private static let maxBytes = 512 * 1024
 
     public static func log(_ message: @autoclosure () -> String) {
-        guard isEnabled else { return }
         var stamp = ISO8601DateFormatter()
         stamp.timeZone = .current
         let line = "[Yearwall \(stamp.string(from: Date()))] \(message())\n"

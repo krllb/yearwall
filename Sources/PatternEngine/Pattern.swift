@@ -13,38 +13,17 @@ public protocol Pattern: Sendable {
         into context: CGContext
     )
 
-    /// Which parts of the config this pattern actually reads, so the settings
-    /// UI can hide controls that would do nothing.
-    static var usedConfigFields: Set<ConfigField> { get }
-
     /// The box the drawing covers, in canvas pixels (origin top-left), so
     /// something can be placed against it on the real desktop.
     func drawnBounds(progress: TimeModel.Progress, composition: Composition) -> CGRect
 }
 
 public extension Pattern {
-    /// Instance-side access to the static identity, for existential values.
-    var patternID: String { Self.id }
-    var patternName: String { Self.displayName }
-    var usedConfigFields: Set<ConfigField> { Self.usedConfigFields }
-
-    /// Most patterns use everything.
-    static var usedConfigFields: Set<ConfigField> { Set(ConfigField.allCases) }
-
     /// The area patterns lay themselves out in. An overestimate for anything
     /// that does not fill it.
     func drawnBounds(progress: TimeModel.Progress, composition: Composition) -> CGRect {
         composition.contentRect
     }
-}
-
-/// A knob in the settings UI. A pattern declares the ones it honours.
-public enum ConfigField: String, Sendable, CaseIterable, Hashable {
-    case theme
-    case contrast
-    case contentScale
-    case density
-    case orientation
 }
 
 /// The role a single unit of time plays in the drawing.

@@ -41,11 +41,6 @@ public struct SeededRNG: RandomNumberGenerator, Sendable {
         return range.lowerBound + Int(next() % span)
     }
 
-    /// `true` with probability `p`.
-    public mutating func chance(_ p: Double) -> Bool {
-        nextUnit() < p
-    }
-
     /// A derived generator, so a sub-part of a drawing can have its own stream
     /// without consuming draws from the parent.
     public func branched(_ label: String) -> SeededRNG {

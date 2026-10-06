@@ -68,10 +68,4 @@ public enum ThemeLibrary {
     public static func preset(id: String) -> Preset? {
         all.first { $0.id == id }
     }
-
-    /// Which preset a theme currently equals, if any. Drives the "Custom"
-    /// label in settings.
-    public static func matchingPresetID(for theme: Theme) -> String? {
-        all.first { $0.theme == theme }?.id
-    }
 }

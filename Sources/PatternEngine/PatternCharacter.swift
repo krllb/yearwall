@@ -18,8 +18,6 @@ public struct PatternCharacter: Sendable, Equatable {
         self.orientation = orientation
     }
 
-    public static let neutral = PatternCharacter(density: 1.0, orientation: 0)
-
     public static func derived(installSeed: UInt64) -> PatternCharacter {
         var rng = SeededRNG(seed: Seeds.installFacet("character", installSeed: installSeed))
         return PatternCharacter(

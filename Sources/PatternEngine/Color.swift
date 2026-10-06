@@ -33,10 +33,6 @@ public struct RGBA: Sendable, Equatable, Codable {
         )
     }
 
-    public func withAlpha(_ a: Double) -> RGBA {
-        RGBA(red, green, blue, a)
-    }
-
     /// Relative luminance (WCAG), used to sanity-check contrast in tests.
     public var luminance: Double {
         func channel(_ c: Double) -> Double {
@@ -58,11 +54,5 @@ public extension CGContext {
     func fillCircle(center: CGPoint, radius: CGFloat) {
         guard radius > 0 else { return }
         fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-    }
-
-    func strokeCircle(center: CGPoint, radius: CGFloat, lineWidth: CGFloat) {
-        guard radius > 0, lineWidth > 0 else { return }
-        setLineWidth(lineWidth)
-        strokeEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
     }
 }

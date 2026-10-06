@@ -9,13 +9,6 @@ public enum TimeMode: String, Sendable, Codable, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
-    public var displayName: String {
-        switch self {
-        case .year: return "Year"
-        case .life: return "Life"
-        }
-    }
-
     /// Noun for a single unit, used by the menu ("day 252 of 365").
     public var unitName: String {
         switch self {
