@@ -38,10 +38,32 @@ public struct BackdropLibrary: Sendable {
         return name
     }
 
-    public func image(named name: String) -> CGImage? {
+    /// Decoded now rather than on first draw, upright whatever its EXIF
+    /// orientation, and no larger than it takes to cover every one of
+    /// `canvases`: a 6000px photo held at full size would cost a menu bar app
+    /// well over 100 MB.
+    public func image(named name: String, covering canvases: [CGSize]) -> CGImage? {
         let url = directory.appendingPathComponent(name)
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Double,
+              let height = properties[kCGImagePropertyPixelHeight] as? Double,
+              width > 0, height > 0
+        else { return nil }
+
+        // Orientations 5 to 8 turn the picture on its side.
+        let orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
+        let size = orientation >= 5 ? CGSize(width: height, height: width) : CGSize(width: width, height: height)
+        let cover = canvases.map { max($0.width / size.width, $0.height / size.height) }.max() ?? 1
+        let longest = (max(size.width, size.height) * min(cover, 1)).rounded(.up)
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(longest, 1),
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 
     /// Deletes every stored picture except `keeping`.

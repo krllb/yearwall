@@ -20,7 +20,7 @@ public final class WallpaperService: NSObject {
     private let store: ConfigStore
     private let cache: WallpaperCache
     private let backdrops: BackdropLibrary
-    private var loadedBackdrop: (name: String, image: CGImage)?
+    private var loadedBackdrop: (name: String, canvases: [CGSize], image: CGImage)?
     private let renderer = WallpaperRenderer()
     private var timeModel: ProgressCalculator
 
@@ -222,7 +222,7 @@ public final class WallpaperService: NSObject {
         appearance: Appearance
     ) throws -> [CGDirectDisplayID: URL] {
         try cache.ensureExists()
-        let backdrop = backdropImage(for: config)
+        let backdrop = backdropImage(for: config, surfaces: surfaces)
 
         var result: [CGDirectDisplayID: URL] = [:]
         for surface in surfaces {
@@ -235,7 +235,7 @@ public final class WallpaperService: NSObject {
                 scale: surface.scale,
                 appearance: appearance
             )
-            let rendered = try renderer.renderPNG(
+            let rendered = try renderer.renderFile(
                 config: config,
                 progress: progress,
                 canvas: canvas,
@@ -276,8 +276,18 @@ public final class WallpaperService: NSObject {
     // MARK: - Backdrop
 
     /// Copies `url` in as the custom theme's picture and switches to it.
-    public func setBackdrop(from url: URL) throws {
-        let name = try backdrops.importImage(from: url)
+    /// Copying and decoding happen off the main thread, so the first render
+    /// with the new picture does not have to wait for them.
+    public func setBackdrop(from url: URL) async throws {
+        let library = backdrops
+        let canvases = Self.canvasSizes(ScreenSurveyor.surfaces())
+        let (name, image) = try await Task.detached {
+            let name = try library.importImage(from: url)
+            return (name, library.image(named: name, covering: canvases))
+        }.value
+        if let image {
+            loadedBackdrop = (name, canvases, image)
+        }
         store.update { $0.backdropName = name }
         backdrops.prune(keeping: name)
     }
@@ -287,16 +297,23 @@ public final class WallpaperService: NSObject {
         backdrops.prune(keeping: nil)
     }
 
-    /// Decoded once per picture, not once per render.
-    private func backdropImage(for config: WallpaperConfig) -> CGImage? {
+    /// Decoded once per picture and set of screens, not once per render.
+    private func backdropImage(for config: WallpaperConfig, surfaces: [ScreenSurface]) -> CGImage? {
         guard let name = config.activeBackdropName else { return nil }
-        if let loadedBackdrop, loadedBackdrop.name == name { return loadedBackdrop.image }
-        guard let image = backdrops.image(named: name) else {
+        let canvases = Self.canvasSizes(surfaces)
+        if let loadedBackdrop, loadedBackdrop.name == name, loadedBackdrop.canvases == canvases {
+            return loadedBackdrop.image
+        }
+        guard let image = backdrops.image(named: name, covering: canvases) else {
             Diagnostics.log("backdrop \(name) could not be read")
             return nil
         }
-        loadedBackdrop = (name, image)
+        loadedBackdrop = (name, canvases, image)
         return image
+    }
+
+    private static func canvasSizes(_ surfaces: [ScreenSurface]) -> [CGSize] {
+        surfaces.map { CGSize(width: $0.pixelWidth, height: $0.pixelHeight) }
     }
 
     // MARK: - Appearance

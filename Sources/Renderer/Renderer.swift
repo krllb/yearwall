@@ -14,7 +14,26 @@ public enum RendererError: Error, CustomStringConvertible {
         switch self {
         case .contextCreationFailed: return "Could not create the bitmap context"
         case .imageCreationFailed: return "Could not snapshot the bitmap context"
-        case .encodingFailed: return "Could not encode the image as PNG"
+        case .encodingFailed: return "Could not encode the image"
+        }
+    }
+}
+
+/// How a wallpaper is written to disk.
+///
+/// Dots on a flat colour compress to a few dozen kilobytes as PNG. Over a
+/// photo, PNG is slow and runs to tens of megabytes, and the photo was lossy
+/// to begin with, so those go out as HEIC.
+public enum ImageFormat: String, Sendable {
+    case png
+    case heic
+
+    public var fileExtension: String { rawValue }
+
+    var type: UTType {
+        switch self {
+        case .png: return .png
+        case .heic: return .heic
         }
     }
 }
@@ -134,19 +153,24 @@ public struct WallpaperRenderer: Sendable {
     }
 
     public func encodePNG(_ image: CGImage) throws -> Data {
+        try encode(image, as: .png)
+    }
+
+    public func encode(_ image: CGImage, as format: ImageFormat) throws -> Data {
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
             data as CFMutableData,
-            UTType.png.identifier as CFString,
+            format.type.identifier as CFString,
             1,
             nil
         ) else {
             throw RendererError.encodingFailed
         }
         // No timestamps, no EXIF: keep the bytes a pure function of the pixels.
-        let options: [CFString: Any] = [
-            kCGImagePropertyPNGDictionary: [kCGImagePropertyPNGInterlaceType: 0] as CFDictionary
-        ]
+        let options: [CFString: Any] = switch format {
+        case .png: [kCGImagePropertyPNGDictionary: [kCGImagePropertyPNGInterlaceType: 0] as CFDictionary]
+        case .heic: [kCGImageDestinationLossyCompressionQuality: 0.9]
+        }
         CGImageDestinationAddImage(destination, image, options as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {
             throw RendererError.encodingFailed
@@ -156,13 +180,13 @@ public struct WallpaperRenderer: Sendable {
 
     // MARK: - Files
 
-    /// Writes the PNG under `directory` with a name that is unique per day,
-    /// per surface and per content.
+    /// Writes the wallpaper under `directory` with a name that is unique per
+    /// day, per surface and per content: PNG, or HEIC when drawn over a picture.
     ///
     /// The unique name is not cosmetic: `NSWorkspace.setDesktopImageURL` caches
     /// by URL, so re-writing the same path leaves the desktop unchanged.
     @discardableResult
-    public func renderPNG(
+    public func renderFile(
         config: WallpaperConfig,
         progress: TimeModel.Progress,
         canvas: CanvasSpec,
@@ -170,9 +194,11 @@ public struct WallpaperRenderer: Sendable {
         tag: String,
         into directory: URL
     ) throws -> RenderResult {
-        let data = try pngData(config: config, progress: progress, canvas: canvas, backdrop: backdrop)
+        let format: ImageFormat = config.activeBackdropName != nil && backdrop != nil ? .heic : .png
+        let image = try render(config: config, progress: progress, canvas: canvas, backdrop: backdrop)
+        let data = try encode(image, as: format)
         let hash = Seeds.hexString(Seeds.hash(bytes: data))
-        let name = "yearwall-\(progress.dayKey)-\(tag)-\(hash).png"
+        let name = "yearwall-\(progress.dayKey)-\(tag)-\(hash).\(format.fileExtension)"
         let url = directory.appendingPathComponent(name)
 
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

@@ -187,9 +187,9 @@ private struct CustomThemeEditor: View {
         panel.message = "Choose a picture to draw the year over"
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
-            MainActor.assumeIsolated {
+            Task { @MainActor in
                 do {
-                    try service.setBackdrop(from: url)
+                    try await service.setBackdrop(from: url)
                 } catch {
                     NSAlert(error: error).runModal()
                 }

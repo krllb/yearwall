@@ -224,7 +224,7 @@ final class DeterminismTests: XCTestCase {
             .appendingPathComponent("yearwall-tests-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        let result = try renderer.renderPNG(
+        let result = try renderer.renderFile(
             config: makeConfig(),
             progress: makeProgress(dayKey: "2026-09-09", todayIndex: 251),
             canvas: makeCanvas(),
@@ -245,7 +245,7 @@ final class DeterminismTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
 
         func render() throws -> URL {
-            try renderer.renderPNG(
+            try renderer.renderFile(
                 config: makeConfig(patternID: GridPattern.id),
                 progress: makeProgress(dayKey: "2026-09-09", todayIndex: 251),
                 canvas: makeCanvas(), tag: "d1", into: directory

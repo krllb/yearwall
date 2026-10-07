@@ -67,6 +67,24 @@ final class CustomThemeTests: XCTestCase {
         XCTAssertEqual(pixel(plain, CGPoint(x: 5, y: 5)), [0, 0, 0, 255], "a preset ignores the picture")
     }
 
+    func testOnlyAPictureWallpaperIsWrittenAsHEIC() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let backdrop = try renderer.render(config: customConfig(marks: RGBA(1, 1, 1)), progress: progress, canvas: canvas)
+
+        let picture = try renderer.renderFile(
+            config: customConfig(marks: RGBA(1, 1, 1), backdrop: "photo"), progress: progress,
+            canvas: canvas, backdrop: backdrop, tag: "t", into: directory
+        )
+        XCTAssertEqual(picture.url.pathExtension, "heic")
+
+        let plain = try renderer.renderFile(
+            config: customConfig(marks: RGBA(1, 1, 1)), progress: progress,
+            canvas: canvas, backdrop: backdrop, tag: "t", into: directory
+        )
+        XCTAssertEqual(plain.url.pathExtension, "png", "no picture in the config, no picture drawn")
+    }
+
     /// A translucent colour must not get darker where a mark sits on the line.
     func testTranslucentLineHasOneOpacity() throws {
         let config = customConfig(marks: RGBA(1, 1, 1, 0.5))
