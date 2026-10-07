@@ -40,7 +40,8 @@ public struct WallpaperRenderer: Sendable {
     public func render(
         config: WallpaperConfig,
         progress: TimeModel.Progress,
-        canvas: CanvasSpec
+        canvas: CanvasSpec,
+        backdrop: CGImage? = nil
     ) throws -> CGImage {
         let composition = Composition(config: config, canvas: canvas)
 
@@ -61,7 +62,7 @@ public struct WallpaperRenderer: Sendable {
         context.translateBy(x: 0, y: CGFloat(canvas.pixelHeight))
         context.scaleBy(x: 1, y: -1)
 
-        draw(config: config, progress: progress, composition: composition, into: context)
+        draw(config: config, progress: progress, composition: composition, backdrop: backdrop, into: context)
 
         guard let image = context.makeImage() else {
             throw RendererError.imageCreationFailed
@@ -71,10 +72,15 @@ public struct WallpaperRenderer: Sendable {
 
     /// The one drawing path. The context must already be in screen
     /// orientation: origin top-left, y growing downward.
+    ///
+    /// `backdrop` replaces the background colour when the config's custom
+    /// theme has one; it is passed in rather than read from disk to keep this
+    /// a function of its arguments.
     public func draw(
         config: WallpaperConfig,
         progress: TimeModel.Progress,
         composition: Composition,
+        backdrop: CGImage? = nil,
         into context: CGContext
     ) {
         context.saveGState()
@@ -85,8 +91,12 @@ public struct WallpaperRenderer: Sendable {
         context.interpolationQuality = .high
 
         // Background first: patterns draw marks, not backdrops.
-        context.setFill(composition.colors.background)
-        context.fill(composition.bounds)
+        if config.activeBackdropName != nil, let backdrop {
+            drawFilling(backdrop, composition.bounds, in: context)
+        } else {
+            context.setFill(composition.colors.background)
+            context.fill(composition.bounds)
+        }
 
         var rng = SeededRNG(seed: config.daySeed(dayKey: progress.dayKey))
         config.pattern().draw(progress: progress, composition: composition, rng: &rng, into: context)
@@ -98,14 +108,29 @@ public struct WallpaperRenderer: Sendable {
         }
     }
 
+    /// Scaled to cover `rect` and centred, cropping the overflow, like the
+    /// system's "Fill Screen".
+    private func drawFilling(_ image: CGImage, _ rect: CGRect, in context: CGContext) {
+        let scale = max(rect.width / CGFloat(image.width), rect.height / CGFloat(image.height))
+        let size = CGSize(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
+        context.saveGState()
+        context.clip(to: rect)
+        // The context is flipped; CGImage draws bottom-up, so flip it back.
+        context.translateBy(x: rect.midX, y: rect.midY)
+        context.scaleBy(x: 1, y: -1)
+        context.draw(image, in: CGRect(x: -size.width / 2, y: -size.height / 2, width: size.width, height: size.height))
+        context.restoreGState()
+    }
+
     // MARK: - PNG
 
     public func pngData(
         config: WallpaperConfig,
         progress: TimeModel.Progress,
-        canvas: CanvasSpec
+        canvas: CanvasSpec,
+        backdrop: CGImage? = nil
     ) throws -> Data {
-        try encodePNG(render(config: config, progress: progress, canvas: canvas))
+        try encodePNG(render(config: config, progress: progress, canvas: canvas, backdrop: backdrop))
     }
 
     public func encodePNG(_ image: CGImage) throws -> Data {
@@ -141,10 +166,11 @@ public struct WallpaperRenderer: Sendable {
         config: WallpaperConfig,
         progress: TimeModel.Progress,
         canvas: CanvasSpec,
+        backdrop: CGImage? = nil,
         tag: String,
         into directory: URL
     ) throws -> RenderResult {
-        let data = try pngData(config: config, progress: progress, canvas: canvas)
+        let data = try pngData(config: config, progress: progress, canvas: canvas, backdrop: backdrop)
         let hash = Seeds.hexString(Seeds.hash(bytes: data))
         let name = "yearwall-\(progress.dayKey)-\(tag)-\(hash).png"
         let url = directory.appendingPathComponent(name)

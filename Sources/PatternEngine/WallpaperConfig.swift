@@ -42,6 +42,10 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
     /// through `adopt(preset:)` or `customiseTheme(_:)`.
     public private(set) var theme: Theme
     public var budget: CompositionBudget
+    /// File name of the picture a custom theme draws its marks over, in the
+    /// app's backdrop folder. Kept when a preset is picked, so switching back
+    /// to Custom brings it back.
+    public var backdropName: String?
     /// Generated once per installation. Fixes the pattern's day-independent
     /// character, and is mixed into every day seed.
     public var installSeed: UInt64
@@ -56,6 +60,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
         themePresetID: String? = ThemeLibrary.defaultID,
         theme: Theme = ThemeLibrary.system,
         budget: CompositionBudget = .default,
+        backdropName: String? = nil,
         installSeed: UInt64 = WallpaperConfig.placeholderSeed
     ) {
         self.mode = mode
@@ -68,6 +73,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
         // A followed preset is the source of truth for the colours.
         self.theme = themePresetID.flatMap { ThemeLibrary.preset(id: $0)?.theme } ?? theme
         self.budget = budget
+        self.backdropName = backdropName
         self.installSeed = installSeed
     }
 
@@ -87,6 +93,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
         case themePresetID
         case theme
         case budget
+        case backdropName
         case installSeed
     }
 
@@ -111,6 +118,11 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
     public mutating func customiseTheme(_ mutate: (inout Theme) -> Void) {
         themePresetID = nil
         mutate(&theme)
+    }
+
+    /// The backdrop the wallpaper is drawn over: only a custom theme has one.
+    public var activeBackdropName: String? {
+        themePresetID == nil ? backdropName : nil
     }
 
     public func pattern() -> any Pattern {
@@ -144,6 +156,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
             themePresetID: presetID,
             theme: container.lenient(.theme, fallback.theme),
             budget: container.lenient(.budget, fallback.budget),
+            backdropName: container.lenient(.backdropName, nil),
             installSeed: container.lenient(.installSeed, fallback.installSeed)
         )
     }
@@ -160,6 +173,7 @@ public struct WallpaperConfig: Codable, Equatable, Sendable {
         try container.encode(themePresetID, forKey: .themePresetID)
         try container.encode(theme, forKey: .theme)
         try container.encode(budget, forKey: .budget)
+        try container.encodeIfPresent(backdropName, forKey: .backdropName)
         try container.encode(installSeed, forKey: .installSeed)
     }
 

@@ -1,3 +1,4 @@
+import AppKit
 import PatternEngine
 import SwiftUI
 import WallpaperService
@@ -12,7 +13,10 @@ struct SettingsToolbar: View {
     static let margin: CGFloat = 12
 
     @Bindable var store: ConfigStore
+    let service: WallpaperService
     let close: () -> Void
+
+    @State private var isEditingCustom = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -20,13 +24,22 @@ struct SettingsToolbar: View {
                 ForEach(ThemeLibrary.all) { preset in
                     Text(preset.name).tag(preset.id)
                 }
-                if store.config.themePresetID == nil {
-                    Text("Custom").tag("custom")
-                }
+                Divider()
+                Text("Custom").tag(Self.customID)
             }
             .labelsHidden()
             .fixedSize()
             .help("Theme")
+
+            if store.config.themePresetID == nil {
+                Button { isEditingCustom.toggle() } label: {
+                    Label("Edit custom theme", systemImage: "paintpalette")
+                }
+                .help("Background, marks and picture")
+                .popover(isPresented: $isEditingCustom, arrowEdge: .top) {
+                    CustomThemeEditor(store: store, service: service)
+                }
+            }
 
             separator
 
@@ -80,15 +93,120 @@ struct SettingsToolbar: View {
         Divider().frame(height: 18)
     }
 
-    /// The preset the current theme equals, or "custom" once it is edited.
+    private static let customID = "custom"
+
+    /// The followed preset, or Custom. Picking Custom starts from the colours
+    /// on screen right now and opens the editor.
     private var themeSelection: Binding<String> {
         Binding(
-            get: { store.config.themePresetID ?? "custom" },
+            get: { store.config.themePresetID ?? Self.customID },
             set: { id in
-                guard let preset = ThemeLibrary.preset(id: id) else { return }
-                store.update { $0.adopt(preset: preset) }
+                if let preset = ThemeLibrary.preset(id: id) {
+                    store.update { $0.adopt(preset: preset) }
+                } else if store.config.themePresetID != nil {
+                    let appearance = service.currentAppearance()
+                    store.update { config in
+                        let colours = config.theme.resolved(
+                            for: appearance,
+                            maxContrast: config.budget.maxPatternContrast,
+                            remainingIntensity: config.budget.remainingIntensity
+                        )
+                        config.customiseTheme {
+                            $0 = .custom(background: colours.background, marks: colours.elapsed, accent: $0.accent)
+                        }
+                    }
+                    isEditingCustom = true
+                }
             }
         )
+    }
+}
+
+/// Background, marks and an optional picture for the Custom theme.
+private struct CustomThemeEditor: View {
+    @Bindable var store: ConfigStore
+    let service: WallpaperService
+
+    var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
+            GridRow {
+                Text("Background")
+                ColorPicker("Background", selection: background, supportsOpacity: false)
+                    .labelsHidden()
+                    .disabled(hasPicture)
+            }
+            GridRow {
+                Text("Marks")
+                ColorPicker("Marks", selection: marks, supportsOpacity: true)
+                    .labelsHidden()
+            }
+            GridRow {
+                Text("Picture")
+                HStack {
+                    Button(hasPicture ? "Replace…" : "Choose…", action: choosePicture)
+                    if hasPicture {
+                        Button("Remove") { service.removeBackdrop() }
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    private var hasPicture: Bool { store.config.backdropName != nil }
+
+    private var background: Binding<CGColor> {
+        Binding(
+            get: { store.config.theme.base.cgColor },
+            set: { colour in
+                store.update { config in
+                    config.customiseTheme {
+                        $0 = .custom(background: RGBA(colour), marks: $0.elapsedOverride ?? RGBA(1, 1, 1), accent: $0.accent)
+                    }
+                }
+            }
+        )
+    }
+
+    private var marks: Binding<CGColor> {
+        Binding(
+            get: { (store.config.theme.elapsedOverride ?? RGBA(1, 1, 1)).cgColor },
+            set: { colour in
+                store.update { config in
+                    config.customiseTheme {
+                        $0 = .custom(background: $0.base, marks: RGBA(colour), accent: $0.accent)
+                    }
+                }
+            }
+        )
+    }
+
+    private func choosePicture() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.message = "Choose a picture to draw the year over"
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            MainActor.assumeIsolated {
+                do {
+                    try service.setBackdrop(from: url)
+                } catch {
+                    NSAlert(error: error).runModal()
+                }
+            }
+        }
+    }
+}
+
+private extension RGBA {
+    init(_ colour: CGColor) {
+        let srgb = colour.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil)
+        let c = srgb?.components ?? [0, 0, 0, 1]
+        self.init(Double(c[0]), Double(c[1]), Double(c[2]), Double(srgb?.alpha ?? 1))
+    }
+
+    var cgColor: CGColor {
+        CGColor(srgbRed: red, green: green, blue: blue, alpha: alpha)
     }
 }
 

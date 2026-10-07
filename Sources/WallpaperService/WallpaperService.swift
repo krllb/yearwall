@@ -19,6 +19,8 @@ public final class WallpaperService: NSObject {
 
     private let store: ConfigStore
     private let cache: WallpaperCache
+    private let backdrops: BackdropLibrary
+    private var loadedBackdrop: (name: String, image: CGImage)?
     private let renderer = WallpaperRenderer()
     private var timeModel: ProgressCalculator
 
@@ -34,9 +36,15 @@ public final class WallpaperService: NSObject {
     /// Called on the main actor after every successful refresh.
     public var onUpdate: (@MainActor (Snapshot) -> Void)?
 
-    public init(store: ConfigStore, cache: WallpaperCache = WallpaperCache(), timeZone: TimeZone = .current) {
+    public init(
+        store: ConfigStore,
+        cache: WallpaperCache = WallpaperCache(),
+        backdrops: BackdropLibrary = BackdropLibrary(),
+        timeZone: TimeZone = .current
+    ) {
         self.store = store
         self.cache = cache
+        self.backdrops = backdrops
         self.timeModel = ProgressCalculator(timeZone: timeZone)
         super.init()
     }
@@ -214,6 +222,7 @@ public final class WallpaperService: NSObject {
         appearance: Appearance
     ) throws -> [CGDirectDisplayID: URL] {
         try cache.ensureExists()
+        let backdrop = backdropImage(for: config)
 
         var result: [CGDirectDisplayID: URL] = [:]
         for surface in surfaces {
@@ -230,6 +239,7 @@ public final class WallpaperService: NSObject {
                 config: config,
                 progress: progress,
                 canvas: canvas,
+                backdrop: backdrop,
                 tag: "\(surface.tag)-\(appearance.rawValue)",
                 into: cache.directory
             )
@@ -261,6 +271,32 @@ public final class WallpaperService: NSObject {
                 Diagnostics.log("setDesktopImageURL failed on display \(displayID): \(error)")
             }
         }
+    }
+
+    // MARK: - Backdrop
+
+    /// Copies `url` in as the custom theme's picture and switches to it.
+    public func setBackdrop(from url: URL) throws {
+        let name = try backdrops.importImage(from: url)
+        store.update { $0.backdropName = name }
+        backdrops.prune(keeping: name)
+    }
+
+    public func removeBackdrop() {
+        store.update { $0.backdropName = nil }
+        backdrops.prune(keeping: nil)
+    }
+
+    /// Decoded once per picture, not once per render.
+    private func backdropImage(for config: WallpaperConfig) -> CGImage? {
+        guard let name = config.activeBackdropName else { return nil }
+        if let loadedBackdrop, loadedBackdrop.name == name { return loadedBackdrop.image }
+        guard let image = backdrops.image(named: name) else {
+            Diagnostics.log("backdrop \(name) could not be read")
+            return nil
+        }
+        loadedBackdrop = (name, image)
+        return image
     }
 
     // MARK: - Appearance

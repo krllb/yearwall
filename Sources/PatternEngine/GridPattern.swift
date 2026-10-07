@@ -27,13 +27,20 @@ public struct GridPattern: Pattern {
         let remaining = composition.colors.remaining
 
         if composition.config.connectsElapsedMarks {
-            // Under the marks, so they still bulge through the line.
+            // Drawn opaque into one layer that is then faded as a whole, so a
+            // translucent colour does not darken where a mark overlaps the line.
+            context.saveGState()
+            context.setAlpha(elapsed.alpha)
+            context.beginTransparencyLayer(auxiliaryInfo: nil)
+            let opaque = elapsed.withAlpha(1)
             strikeElapsedRuns(progress: progress, layout: layout, radius: radius,
-                              colour: elapsed, composition: composition, into: context)
-            context.setFill(elapsed)
+                              colour: opaque, composition: composition, into: context)
+            context.setFill(opaque)
             for index in 0 ..< total {
                 context.fillCircle(center: layout.center(of: index), radius: radius)
             }
+            context.endTransparencyLayer()
+            context.restoreGState()
             return
         }
 

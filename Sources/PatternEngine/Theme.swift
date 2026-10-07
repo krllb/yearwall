@@ -56,6 +56,22 @@ public struct Theme: Codable, Equatable, Sendable {
         self.remainingOverride = remainingOverride
     }
 
+    /// How opaque a custom theme's marks still ahead are, relative to its
+    /// marks already behind.
+    public static let customRemainingOpacity = 0.3
+
+    /// A fixed theme with these two colours, the way the Custom editor
+    /// builds one: marks still ahead are `marks` at reduced opacity.
+    public static func custom(background: RGBA, marks: RGBA, accent: RGBA) -> Theme {
+        Theme(
+            base: background,
+            accent: accent,
+            contrast: contrastRange.upperBound,
+            elapsedOverride: marks,
+            remainingOverride: marks.withAlpha(marks.alpha * customRemainingOpacity)
+        )
+    }
+
     /// Whether the theme switches with the system appearance.
     public var followsAppearance: Bool { lightBase != nil }
 

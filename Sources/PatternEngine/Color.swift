@@ -33,6 +33,10 @@ public struct RGBA: Sendable, Equatable, Codable {
         )
     }
 
+    public func withAlpha(_ alpha: Double) -> RGBA {
+        RGBA(red, green, blue, alpha)
+    }
+
     /// Relative luminance (WCAG), used to sanity-check contrast in tests.
     public var luminance: Double {
         func channel(_ c: Double) -> Double {

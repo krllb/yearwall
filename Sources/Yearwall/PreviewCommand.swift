@@ -19,6 +19,10 @@ enum PreviewCommand {
         let scale = Double(value("--scale") ?? "") ?? 2
         let appearance = Appearance(rawValue: value("--appearance") ?? value("--scheme") ?? "dark") ?? .dark
         let output = URL(fileURLWithPath: value("--out") ?? "preview.png")
+        let backdrop = value("--backdrop").flatMap { path -> CGImage? in
+            guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else { return nil }
+            return CGImageSourceCreateImageAtIndex(source, 0, nil)
+        }
 
         let calculator = ProgressCalculator()
         var config = WallpaperConfig.default
@@ -27,6 +31,17 @@ enum PreviewCommand {
         config.mode = TimeMode(rawValue: value("--mode") ?? "year") ?? .year
         if let themeID = value("--theme"), let preset = ThemeLibrary.preset(id: themeID) {
             config.adopt(preset: preset)
+        }
+        if let marks = value("--marks").flatMap({ UInt32($0, radix: 16) }) {
+            let background = value("--background").flatMap { UInt32($0, radix: 16) } ?? 0x000000
+            let opacity = Double(value("--marks-opacity") ?? "") ?? 1
+            config.customiseTheme {
+                $0 = .custom(background: RGBA(hex: background), marks: RGBA(hex: marks, alpha: opacity), accent: $0.accent)
+            }
+        }
+        if backdrop != nil {
+            config.customiseTheme { _ in }
+            config.backdropName = "preview"
         }
         if let years = Int(value("--block-years") ?? "") { config.budget.groupsPerBlock = years }
         if let perRow = Int(value("--blocks-per-row") ?? "") { config.budget.blocksPerRow = perRow }
@@ -51,7 +66,9 @@ enum PreviewCommand {
         )
 
         do {
-            let data = try WallpaperRenderer().pngData(config: config, progress: progress, canvas: canvas)
+            let data = try WallpaperRenderer().pngData(
+                config: config, progress: progress, canvas: canvas, backdrop: backdrop
+            )
             try data.write(to: output)
             print("\(output.path)  \(width)x\(height)  \(progress.summary)  "
                 + "\(config.patternID)/\(appearance.rawValue)")

@@ -29,6 +29,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     /// Whether this session has seen the desktop cleared, so the watch can
     /// tell "not cleared yet" from "cleared and then brought back".
     private var sawDesktopCleared = false
+    /// Whether the colour panel or the file dialog was up at the last check.
+    private var sawAuxiliaryWindow = false
 
     init(store: ConfigStore, service: WallpaperService) {
         self.store = store
@@ -73,7 +75,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     // MARK: - Window
 
     private func makePanel() -> NSPanel {
-        let toolbar = SettingsToolbar(store: store) { [weak self] in self?.panel?.close() }
+        let toolbar = SettingsToolbar(store: store, service: service) { [weak self] in self?.panel?.close() }
         let controller = NSHostingController(rootView: toolbar)
         let panel = ToolbarPanel(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
         panel.contentViewController = controller
@@ -156,8 +158,11 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             ) { [weak self] event in
                 MainActor.assumeIsolated {
                     // A global event has no window: its location is on screen.
-                    guard !Self.isInMenuBar(event.locationInWindow) else { return }
-                    self?.leave(reason: "click outside")
+                    guard let self, !Self.isInMenuBar(event.locationInWindow) else { return }
+                    // The file dialog runs in another process, so clicks in it,
+                    // the closing one on Open included, arrive as global events.
+                    guard !self.isShowingAuxiliaryWindow, !self.sawAuxiliaryWindow else { return }
+                    self.leave(reason: "click outside")
                 }
             }
         }
@@ -180,12 +185,30 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     /// The windows came back without us: the gesture, F11, a click on a
     /// window's edge, or a switch to another app.
+    ///
+    /// The colour panel and the file dialog are ours and may bring the
+    /// windows back on their own; while one is up that is not leaving, and
+    /// once it is gone the desktop is cleared again.
     private func checkDesktop() {
+        if isShowingAuxiliaryWindow {
+            sawAuxiliaryWindow = true
+            return
+        }
+        if sawAuxiliaryWindow {
+            sawAuxiliaryWindow = false
+            sawDesktopCleared = false
+            clearDesktop()
+            return
+        }
         if ShowDesktop.isActive {
             sawDesktopCleared = true
         } else if sawDesktopCleared {
             leave(reason: "windows brought back")
         }
+    }
+
+    private var isShowingAuxiliaryWindow: Bool {
+        NSApp.windows.contains { $0.isVisible && ($0 is NSColorPanel || $0 is NSSavePanel) }
     }
 
     private func leave(reason: String) {
