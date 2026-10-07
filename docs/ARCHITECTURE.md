@@ -153,10 +153,9 @@ name, but only one display was attached.
 machine before Yearwall ran. macOS keeps a copy of every image ever set and does not prune
 it.
 
-Yearwall prunes its own output: the newest 7 days survive, and within a kept day only the
-newest render per surface (display × resolution × appearance), so a day of fiddling with
-settings does not leave a file per change. Files it did not generate are never parsed and
-never deleted.
+Yearwall prunes its own output: after each new wallpaper is applied, every file it generated
+except the ones on screen is deleted. A render takes a fraction of a second, so there is
+nothing worth keeping. Files it did not generate are never parsed and never deleted.
 
 Cleaning the system cache is not implemented: it needs proof that a file is unreferenced
 by the current configuration plus an explicit opt-in.

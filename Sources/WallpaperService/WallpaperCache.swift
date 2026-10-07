@@ -1,18 +1,16 @@
 import Foundation
 
-/// Where generated PNGs live, and how many of them survive.
+/// Where generated wallpapers live: only the ones on screen right now.
 ///
-/// macOS keeps its own copy of every image ever set as a wallpaper and does
-/// not currently prune it. We cannot fix that from here, but we can at least
-/// stop our own output from accumulating.
+/// A render takes a fraction of a second, so there is nothing worth keeping
+/// once a newer wallpaper has replaced it. macOS keeps its own copy of every
+/// image ever set and does not prune it; we cannot fix that from here, but
+/// our own output does not accumulate.
 public struct WallpaperCache: Sendable {
     public let directory: URL
-    /// How many distinct days to keep.
-    public let retainedDays: Int
 
-    public init(directory: URL? = nil, retainedDays: Int = 7) {
+    public init(directory: URL? = nil) {
         self.directory = directory ?? WallpaperCache.defaultDirectory
-        self.retainedDays = max(1, retainedDays)
     }
 
     public static var defaultDirectory: URL {
@@ -25,14 +23,16 @@ public struct WallpaperCache: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
-    /// `yearwall-2026-09-09-d1-3840x2160-dark-<hash>.png`
+    /// `yearwall-2026-09-09-d1-3840x2160-dark-<hash>.png` (or `.heic`)
     /// -> day `2026-09-09`, surface `d1-3840x2160-dark`.
     ///
     /// Only files this app generated are ever parsed, and therefore only those
     /// are ever deleted.
     static func components(ofFileName name: String) -> (day: String, surface: String)? {
-        guard name.hasPrefix("yearwall-"), name.hasSuffix(".png") else { return nil }
-        let stem = name.dropFirst("yearwall-".count).dropLast(".png".count)
+        guard name.hasPrefix("yearwall-"),
+              let suffix = [".png", ".heic"].first(where: { name.hasSuffix($0) })
+        else { return nil }
+        let stem = name.dropFirst("yearwall-".count).dropLast(suffix.count)
         let parts = stem.split(separator: "-", omittingEmptySubsequences: false)
         // year, month, day, at least one surface component, hash
         guard parts.count >= 5 else { return nil }
@@ -43,60 +43,18 @@ public struct WallpaperCache: Sendable {
         return (day, surface)
     }
 
-    static func dayKey(fromFileName name: String) -> String? {
-        components(ofFileName: name)?.day
-    }
-
-    /// Deletes generated files that are no longer worth keeping:
-    ///
-    /// * anything older than the newest `retainedDays` days, and
-    /// * within a kept day, every superseded render of the same surface — a
-    ///   day of fiddling with settings would otherwise leave a file per change.
-    ///
+    /// Deletes every generated wallpaper except `keeping`, the ones on screen.
     /// Returns the URLs removed.
     @discardableResult
-    public func prune(keeping protected: Set<URL> = []) -> [URL] {
+    public func prune(keeping current: Set<URL>) -> [URL] {
         let fm = FileManager.default
         guard let names = try? fm.contentsOfDirectory(atPath: directory.path) else { return [] }
-
-        struct Entry {
-            let name: String
-            let surface: String
-            let modified: Date
-        }
-
-        var byDay: [String: [Entry]] = [:]
-        for name in names {
-            guard let parsed = Self.components(ofFileName: name) else { continue }
-            let url = directory.appendingPathComponent(name)
-            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate ?? .distantPast
-            byDay[parsed.day, default: []].append(
-                Entry(name: name, surface: parsed.surface, modified: modified)
-            )
-        }
-
-        let keptDays = Set(byDay.keys.sorted(by: >).prefix(retainedDays))
-        let protectedPaths = Set(protected.map(\.standardizedFileURL.path))
-
-        var doomed: [String] = []
-        for (day, entries) in byDay {
-            if !keptDays.contains(day) {
-                doomed.append(contentsOf: entries.map(\.name))
-                continue
-            }
-            // Keep the newest render per surface; drop the rest.
-            let bySurface = Dictionary(grouping: entries, by: \.surface)
-            for (_, group) in bySurface {
-                let survivor = group.max { $0.modified < $1.modified }?.name
-                doomed.append(contentsOf: group.map(\.name).filter { $0 != survivor })
-            }
-        }
+        let kept = Set(current.map(\.standardizedFileURL.path))
 
         var removed: [URL] = []
-        for name in doomed {
+        for name in names where Self.components(ofFileName: name) != nil {
             let url = directory.appendingPathComponent(name)
-            if protectedPaths.contains(url.standardizedFileURL.path) { continue }
+            guard !kept.contains(url.standardizedFileURL.path) else { continue }
             if (try? fm.removeItem(at: url)) != nil {
                 removed.append(url)
             }
