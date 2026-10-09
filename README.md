@@ -37,9 +37,9 @@ Click the grid icon in the menu bar:
 
 - **Settings…** clears the desktop and puts a settings bar right under the grid, so you
   tune the wallpaper you are looking at. Click anywhere else, or press Esc, to close it.
-- **Refresh Now** redraws the wallpaper.
 - **Launch at Login** starts Yearwall with your Mac.
 - **Check for Updates…** checks right away instead of waiting a day.
+- **About Yearwall** shows the version and links to the website, GitHub and the developer.
 
 In the settings bar:
 

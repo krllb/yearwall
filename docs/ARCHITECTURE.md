@@ -81,7 +81,7 @@ macOS (`Could not switch to audit session`), and AppleScript via System Events n
 
 Triggers: launch, local midnight, `NSWorkspace.didWakeNotification`,
 `NSApplication.didChangeScreenParametersNotification`, `AppleInterfaceThemeChangedNotification`,
-`NSWorkspace.activeSpaceDidChangeNotification`, and "Refresh Now".
+`NSWorkspace.activeSpaceDidChangeNotification`, and any settings change.
 
 Midnight is re-scheduled after each fire from `Calendar.nextDate(after:matching:)` rather
 than by a 24-hour repeating timer, so DST and sleep cannot make it drift.

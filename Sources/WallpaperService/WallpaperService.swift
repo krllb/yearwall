@@ -143,15 +143,6 @@ public final class WallpaperService: NSObject {
         coalesceTimer = timer
     }
 
-    /// "Refresh now" from the menu: bypass the debounce, redo the work.
-    public func refreshNow() {
-        coalesceTimer?.invalidate()
-        coalesceTimer = nil
-        pendingReasons.removeAll()
-        appliedFingerprint = nil
-        performRefresh(reason: "manual")
-    }
-
     // MARK: - The actual work
 
     private func performRefresh(reason: String) {

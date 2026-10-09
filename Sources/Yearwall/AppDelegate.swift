@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = ConfigStore()
     private lazy var service = WallpaperService(store: store)
     private lazy var settingsWindow = SettingsWindow(store: store, service: service)
+    private let aboutWindow = AboutWindow()
     private let updater = Updater.Configuration().map { Updater(configuration: $0, log: { Diagnostics.log($0) }) }
 
     private var statusItem: NSStatusItem?
@@ -51,7 +52,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(progressItem)
         menu.addItem(.separator())
 
-        menu.addItem(withTitle: "Refresh Now", action: #selector(refreshNow), keyEquivalent: "r").target = self
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
 
         loginItem.action = #selector(toggleLaunchAtLogin)
@@ -65,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateItem.isEnabled = updater != nil
 
         menu.addItem(.separator())
+        menu.addItem(withTitle: "About Yearwall", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Quit Yearwall", action: #selector(quit), keyEquivalent: "q").target = self
 
         item.menu = menu
@@ -80,10 +81,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Actions
-
-    @objc private func refreshNow() {
-        service.refreshNow()
-    }
 
     @objc private func openSettings() {
         settingsWindow.show()
@@ -119,6 +116,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
         }
+    }
+
+    @objc private func showAbout() {
+        aboutWindow.show()
     }
 
     @objc private func quit() {

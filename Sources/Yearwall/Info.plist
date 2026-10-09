@@ -25,6 +25,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>No analytics. Network is used only to check for updates.</string>
+	<string>© 2026 Kirill Baliasnikov</string>
 </dict>
 </plist>
